@@ -88,7 +88,7 @@ function ToastEl({ t, rm }: { t: T; rm: () => void }) {
 
 // ── Wallet Button ──────────────────────────────────────────────────────────
 function WalletBtn({ toast }: { toast: (m: string, k: Kind) => void }) {
-  const { connect, disconnect, account, connected, wallets, connecting } = useWallet();
+  const { connect, disconnect, account, connected, wallets } = useWallet();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
