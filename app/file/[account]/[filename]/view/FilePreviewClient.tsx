@@ -160,11 +160,17 @@ export default function FilePreviewClient({ fileName, contentType, contentLength
           </div>
         )}
 
-        {/* Download button */}
-        <button onClick={handleDownload} disabled={downloading} style={{ cursor: downloading ? "wait" : "pointer" }}
-          className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-bold text-base
-            text-stone-950 disabled:opacity-60 transition-all shadow-xl shadow-amber-900/30 active:scale-[0.98]"
-          style={{ background: downloading ? "#d97706" : "linear-gradient(135deg,#f59e0b,#d97706)" }}>
+        {/* Download button - FIXED */}
+        <button 
+          onClick={handleDownload} 
+          disabled={downloading}
+          className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-bold text-base text-stone-950 disabled:opacity-60 transition-all shadow-xl shadow-amber-900/30 active:scale-[0.98]"
+          style={{ 
+            background: downloading 
+              ? "#d97706" 
+              : "linear-gradient(135deg,#f59e0b,#d97706)" 
+          }}
+        >
           {downloading ? (
             <><svg className="animate-spin w-5 h-5" viewBox="0 0 20 20" fill="none">
               <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="2" className="opacity-25" />
@@ -179,6 +185,7 @@ export default function FilePreviewClient({ fileName, contentType, contentLength
 
         <p className="text-center text-xs text-stone-700 mt-6">
           This file is shared via <span className="text-amber-700">Linker</span> — decentralized storage on the Aptos blockchain
+          <br />© {new Date().getFullYear()} Beauty Benedict · All rights reserved
         </p>
       </main>
     </div>
