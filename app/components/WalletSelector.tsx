@@ -8,7 +8,7 @@ function truncate(addr: string) {
 }
 
 export function WalletSelector() {
-  const { connect, disconnect, account, connected, wallets, connecting } = useWallet();
+  const { connect, disconnect, account, connected, wallets } = useWallet();
   const [open, setOpen] = useState(false);
 
   if (connected && account) {
@@ -46,10 +46,9 @@ export function WalletSelector() {
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        disabled={connecting}
-        className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-semibold"
+        className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 transition-colors text-sm font-semibold"
       >
-        {connecting ? "Connecting…" : "Connect Wallet"}
+        Connect Wallet
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-white/10 bg-[#13131a] shadow-2xl z-50 overflow-hidden">
