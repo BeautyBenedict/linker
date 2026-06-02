@@ -1,6 +1,7 @@
 "use client";
 
 import { AptosWalletAdapterProvider } from "@aptos-labs/wallet-adapter-react";
+import { Network } from "@aptos-labs/ts-sdk";
 
 export default function WalletProvider({
   children,
@@ -12,7 +13,7 @@ export default function WalletProvider({
       autoConnect={false}
       optInWallets={["Petra"]}
       dappConfig={{
-        network: "testnet",           // Shelbynet uses testnet under the hood
+        network: Network.TESTNET,        // ← This is the correct way
         aptosConnect: { 
           dappName: "Linker" 
         }
