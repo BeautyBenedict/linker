@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const RPC_BASE = "https://api.shelbynet.shelby.xyz/shelby";
-const API_KEY = "AG-PG2RND4MMYKIYDF3NFV2HRB3YK1I1NERL";
+const API_KEY = process.env.SHELBY_API_KEY!;
 
 export async function GET(
   _req: NextRequest,

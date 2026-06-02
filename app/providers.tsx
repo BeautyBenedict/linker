@@ -18,7 +18,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     () =>
       new ShelbyClient({
         network: Network.SHELBYNET,
-        apiKey: "AG-PG2RND4MMYKIYDF3NFV2HRB3YK1I1NERL",
+        apiKey: process.env.NEXT_PUBLIC_SHELBY_API_KEY!,
       }),
     []
   );
