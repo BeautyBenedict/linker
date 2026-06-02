@@ -14,7 +14,7 @@ export default function WalletProvider({
     <AptosWalletAdapterProvider
       autoConnect={false}
       optInWallets={["Petra"]}
-      dappConfig={{ aptosConnect: { dappName: "Linker" } }}
+      dappConfig={{ network: "shelbynet" as any, aptosConnect: { dappName: "Linker" } }}
     >
       {children}
     </AptosWalletAdapterProvider>
