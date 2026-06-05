@@ -89,6 +89,7 @@ function ToastEl({ t, rm }: { t: T; rm: () => void }) {
 // ── Wallet Button ──────────────────────────────────────────────────────────
 function WalletBtn({ toast }: { toast: (m: string, k: Kind) => void }) {
   const { connect, disconnect, account, connected, wallets } = useWallet();
+  const [connecting, setConnecting] = useState(false);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -140,7 +141,7 @@ function WalletBtn({ toast }: { toast: (m: string, k: Kind) => void }) {
           <p className="px-4 py-3 text-xs text-stone-500 border-b border-stone-800">Select a wallet</p>
           {wallets?.filter(w => w.name === "Petra").length ? (
             wallets.filter(w => w.name === "Petra").map(w => (
-              <button key={w.name} onClick={() => { connect(w.name); setOpen(false); }}
+              <button key={w.name} onClick={() => { setConnecting(true); connect(w.name); setOpen(false); }}
                 style={{ cursor: "pointer" }}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-stone-800/80 transition-colors text-sm text-stone-200">
                 {w.icon && <img src={w.icon} alt={w.name} className="w-6 h-6 rounded-lg" />}
@@ -321,6 +322,9 @@ export default function Home() {
   const tid = useRef(0);
   const [names, setNames] = useState<string[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<BlobMetadata | null>(null);
+
+  // Reset connecting state once wallet connects
+  useEffect(() => { if (connected) setConnecting(false); }, [connected]);
 
   const toast = useCallback((msg: string, kind: Kind = "info") => {
     const id = ++tid.current;
