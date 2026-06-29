@@ -29,19 +29,36 @@ function parseBlobName(fullName: string): { account: string; fileName: string } 
   const slashIdx = withoutAt.indexOf("/");
   if (slashIdx === -1) return { account: withoutAt, fileName: withoutAt };
   const account = withoutAt.slice(0, slashIdx);
+  // Always ensure 0x prefix on account address
   const accountWithPrefix = account.startsWith("0x") ? account : `0x${account}`;
   return { account: accountWithPrefix, fileName: withoutAt.slice(slashIdx + 1) };
 }
 
+// Internal RPC fetch URL — needs API key header
 function rpcUrl(fullName: string): string {
   const { account, fileName } = parseBlobName(fullName);
   return `${RPC_BASE}/v1/blobs/${account}/${encodeURIComponent(fileName)}`;
 }
 
+// Clean shareable link — encodes account+filename into a short base64 token
+// Result looks like: http://localhost:3000/file/0xABC123/photo.jpg
+// The route.ts proxy fetches it server-side with the API key so no auth needed by recipient
+// Share link — encodes filename as base64 to avoid routing issues with special characters
 function shareableUrl(fullName: string): string {
   const { account, fileName } = parseBlobName(fullName);
+  const encodedFile = btoa(unescape(encodeURIComponent(fileName)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
   const base = typeof window !== "undefined" ? window.location.origin : "";
-  return `${base}/file/${account}/${encodeURIComponent(fileName)}/view`;
+  return `${base}/file/${account}/${encodedFile}`;
+}
+
+// Verification link — base64url encodes account||filename as the blobId
+function verifyUrl(fullName: string): string {
+  const { account, fileName } = parseBlobName(fullName);
+  const blobId = btoa(`${account}||${fileName}`)
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+  const base = typeof window !== "undefined" ? window.location.origin : "";
+  return `${base}/view/${blobId}`;
 }
 
 function extIcon(name: string) {
@@ -83,6 +100,7 @@ function ToastEl({ t, rm }: { t: T; rm: () => void }) {
 // ── Wallet Button ──────────────────────────────────────────────────────────
 function WalletBtn({ toast }: { toast: (m: string, k: Kind) => void }) {
   const { connect, disconnect, account, connected, wallets } = useWallet();
+  const [connecting, setConnecting] = useState(false);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -119,21 +137,22 @@ function WalletBtn({ toast }: { toast: (m: string, k: Kind) => void }) {
 
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-amber-500 hover:bg-amber-400 text-stone-950 transition-all shadow-lg shadow-amber-900/40">
+      <button onClick={() => setOpen(v => !v)} disabled={connecting}
+        style={{ cursor: connecting ? "wait" : "pointer" }}
+        className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-amber-500 hover:bg-amber-400 text-stone-950 disabled:opacity-50 transition-all shadow-lg shadow-amber-900/40">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
           <rect x="1" y="4" width="12" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
           <path d="M4 4V3a3 3 0 016 0v1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
           <circle cx="7" cy="8.5" r="1.2" fill="currentColor" />
         </svg>
-        Connect Wallet
+        {connecting ? "Connecting…" : "Connect Wallet"}
       </button>
       {open && (
         <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-stone-700 bg-stone-950 shadow-2xl z-50 overflow-hidden">
           <p className="px-4 py-3 text-xs text-stone-500 border-b border-stone-800">Select a wallet</p>
           {wallets?.filter(w => w.name === "Petra").length ? (
             wallets.filter(w => w.name === "Petra").map(w => (
-              <button key={w.name} onClick={() => { connect(w.name); setOpen(false); }}
+              <button key={w.name} onClick={() => { setConnecting(true); connect(w.name); setOpen(false); }}
                 style={{ cursor: "pointer" }}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-stone-800/80 transition-colors text-sm text-stone-200">
                 {w.icon && <img src={w.icon} alt={w.name} className="w-6 h-6 rounded-lg" />}
@@ -248,8 +267,8 @@ function DeleteModal({ fileName, onConfirm, onCancel, deleting }: {
 }
 
 // ── File Card ──────────────────────────────────────────────────────────────
-function FileCard({ blob, i, onCopy, onDownload, onDelete }: {
-  blob: BlobMetadata; i: number; onCopy: () => void; onDownload: () => void; onDelete: () => void;
+function FileCard({ blob, i, onCopy, onDownload, onDelete, onVerify }: {
+  blob: BlobMetadata; i: number; onCopy: () => void; onDownload: () => void; onDelete: () => void; onVerify: () => void;
 }) {
   const suffix = getBlobNameSuffix(blob.name.toString());
   const icon = extIcon(suffix);
@@ -275,12 +294,14 @@ function FileCard({ blob, i, onCopy, onDownload, onDelete }: {
         </div>
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
+        {/* Download */}
         <button onClick={onDownload} title="Download file" style={{ cursor: "pointer" }}
           className="w-9 h-9 rounded-xl bg-stone-800 hover:bg-stone-700 flex items-center justify-center transition-colors text-stone-400 hover:text-stone-100">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M7 1.5v8M7 9.5l-3-3M7 9.5l3-3M1.5 12.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
+        {/* Copy link */}
         <button onClick={handleCopy} style={{ cursor: "pointer" }}
           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all
             ${copied
@@ -292,6 +313,24 @@ function FileCard({ blob, i, onCopy, onDownload, onDelete }: {
             <><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M4 7l2.5-2.5M6 4.5H7.5a2 2 0 010 4H6M5 6.5H3.5a2 2 0 010-4H5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg> Copy Link</>
           )}
         </button>
+        {/* Verify */}
+        <button onClick={onVerify} title="Verify on-chain" style={{ cursor: "pointer" }}
+          className="w-9 h-9 rounded-xl bg-stone-800 hover:bg-amber-950/60 flex items-center justify-center transition-colors text-stone-600 hover:text-amber-400">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <path d="M6.5 1.5a5 5 0 100 10 5 5 0 000-10z" stroke="currentColor" strokeWidth="1.2"/>
+            <path d="M4.5 6.5l1.5 1.5 2.5-2.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        {/* Verify on-chain */}
+        <button onClick={onVerify} title="Verify on-chain" style={{ cursor: "pointer" }}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-emerald-900/40 text-emerald-500 hover:bg-emerald-950/40 transition-colors bg-emerald-950/20">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+            <circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" strokeWidth="1.2"/>
+            <path d="M3.5 5.5l1.5 1.5 2.5-2.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Verify
+        </button>
+        {/* Delete */}
         <button onClick={onDelete} title="Delete file" style={{ cursor: "pointer" }}
           className="w-9 h-9 rounded-xl bg-stone-800 hover:bg-rose-950/60 hover:border hover:border-rose-900/60 flex items-center justify-center transition-colors text-stone-600 hover:text-rose-400">
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
@@ -330,6 +369,7 @@ export default function Home() {
     onSuccess: () => {
       toast("File uploaded to Shelby! 🎉 Share the link with anyone.", "success");
       setNames([]);
+      // Refetch after a short delay to let the indexer catch up
       setTimeout(() => refetch(), 2500);
     },
     onError: (err: Error) => {
@@ -357,6 +397,7 @@ export default function Home() {
   const handleFiles = useCallback(async (files: File[]) => {
     if (!connected || !account) { toast("Connect your Petra wallet first.", "error"); return; }
 
+    // Shelbynet multipart (>5MB) is unstable on testnet — warn and block
     const tooBig = files.filter(f => f.size > 4.5 * 1024 * 1024);
     if (tooBig.length > 0) {
       toast(
@@ -388,6 +429,7 @@ export default function Home() {
 
   const handleDownload = (blob: BlobMetadata) => {
     const suffix = getBlobNameSuffix(blob.name.toString());
+    // Download via our proxy page which adds the API key
     window.open(rpcUrl(blob.name.toString()), "_blank");
     toast(`Opening ${suffix}…`, "info");
   };
@@ -531,7 +573,8 @@ export default function Home() {
                 <FileCard key={blob.name.toString()} blob={blob} i={i}
                   onCopy={() => handleCopy(blob)}
                   onDownload={() => handleDownload(blob)}
-                  onDelete={() => setDeleteTarget(blob)} />
+                  onDelete={() => setDeleteTarget(blob)}
+                  onVerify={() => window.open(verifyUrl(blob.name.toString()), "_blank")} />
               ))}
             </div>
           )}
